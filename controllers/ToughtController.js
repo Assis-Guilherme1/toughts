@@ -53,9 +53,9 @@ module.exports = class ToughtController {
     });
 
     // check user exists
-    if (!user) {
-      res.redirect("/login");
-    }
+    // if (!user) {
+    //   res.redirect("/login");
+    // }
 
     const toughts = user.Toughts.map((result) => result.dataValues);
 
