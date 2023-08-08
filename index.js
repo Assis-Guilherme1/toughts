@@ -8,23 +8,17 @@ const app = express();
 
 const conn = require("./db/conn");
 
-//Import Routes
-const toughtsRouter = require('./routes/toughtsRouter')
-const authRouter = require('./routes/authRouter')
-
-//Import controller
-const ToughtController = require("./controllers/ToughtController");
-
-//Models
+// Models
 const Tought = require("./models/Tought");
-const User = require("./models/User");
 
+// routes
+const toughtsRoutes = require("./routes/toughtsRoutes");
+const authRoutes = require("./routes/authRoutes");
+const ToughController = require("./controllers/ToughtController");
 
-//template engine
-app.engine("handlebars", exphbs.engine());
+app.engine("handlebars", exphbs());
 app.set("view engine", "handlebars");
 
-//receber resposta do body
 app.use(
   express.urlencoded({
     extended: true,
@@ -33,34 +27,36 @@ app.use(
 
 app.use(express.json());
 
-// session middleware
+//session middleware
 app.use(
   session({
-    name: "session",
-    secret: "nossos_secret",
+    name: 'session',
+    secret: 'nosso_secret',
     resave: false,
     saveUninitialized: false,
     store: new FileStore({
       logFn: function () {},
-      path: require("path").join(require("os").tmpdir(), "sessions"),
+      path: require('path').join(require('os').tmpdir(), 'sessions'),
     }),
     cookie: {
       secure: false,
-      maxAge: 360000,
-      expires: new Date(Date.now() + 360000),
+      maxAge: 3600000,
+      expires: new Date(Date.now() + 3600000),
       httpOnly: true,
     },
-  })
-);
+  }),
+)
 
-//flash messages
+// flash messages
 app.use(flash());
 
-// public path
 app.use(express.static("public"));
 
-//set session to res
+// set session to res
 app.use((req, res, next) => {
+  // console.log(req.session)
+  console.log(req.session.userid);
+
   if (req.session.userid) {
     res.locals.session = req.session;
   }
@@ -68,13 +64,14 @@ app.use((req, res, next) => {
   next();
 });
 
-//Routes
-app.use('/toughts', toughtsRouter)
-app.use('/', authRouter)
+app.use("/toughts", toughtsRoutes);
+app.use("/", authRoutes);
 
-app.get('/', ToughtController.showToughts)
+app.get("/", ToughController.showToughts);
 
 conn
   .sync()
-  .then(() => app.listen(3000))
-  .catch((error) => console.log(error));
+  .then(() => {
+    app.listen(3000);
+  })
+  .catch((err) => console.log(err));

@@ -1,141 +1,132 @@
-const Toughts = require("../models/Tought");
-const User = require("../models/User");
+const Tought = require('../models/Tought')
+const User = require('../models/User')
 
-const { Op } = require("sequelize");
+const { Op } = require('sequelize')
 
-module.exports = class ToughtController {
-  static async showToughts(req, res) {
-    let search = "";
-
-    if (req.query.search) {
-      search = req.query.search;
-    }
-
-    let order = "DESC";
-
-    if (req.query.order === "old") {
-      order = "ASC";
-    } else {
-      order = "DESC";
-    }
-
-    const toughtsData = await Toughts.findAll({
-      include: User,
-      where: {
-        [Op.or]: [
-          { title: { [Op.like]: `%${search}%` } },
-          { "$User.name$": { [Op.like]: `%${search}%` } },
-        ],
-      },
-      order: [["createdAt", order]],
-    });
-
-    const toughts = toughtsData.map((result) => result.get({ plain: true }));
-
-    let toughtsQty = toughts.length;
-
-    if (toughtsQty === 0) {
-      toughtsQty = false;
-    }
-
-    res.render("toughts/home", { toughts, search, toughtsQty });
-  }
-
+module.exports = class ToughController {
   static async dashboard(req, res) {
-    const userId = req.session.userid;
+    const userId = req.session.userid
 
     const user = await User.findOne({
       where: {
         id: userId,
       },
-      include: Toughts,
+      include: Tought,
       plain: true,
-    });
+    })
 
-    // check user exists
-    if (!user) {
-      res.redirect("/login");
+    const toughts = user.Toughts.map((result) => result.dataValues)
+
+    let emptyToughts = true
+
+    if (toughts.length > 0) {
+      emptyToughts = false
     }
 
-    const toughts = user.Toughts.map((result) => result.dataValues);
+    console.log(toughts)
+    console.log(emptyToughts)
 
-    let emptyToughts = false;
-
-    if (toughts.length === 0) {
-      emptyToughts = true;
-    }
-
-    res.render("toughts/dashboard", { toughts, emptyToughts });
+    res.render('toughts/dashboard', { toughts, emptyToughts })
   }
 
   static createTought(req, res) {
-    res.render("toughts/create");
+    res.render('toughts/create')
   }
 
-  static async createToughtSave(req, res) {
-    const title = req.body.title;
-    const UserId = req.session.userid;
-
+  static createToughtSave(req, res) {
     const tought = {
-      title,
-      UserId,
-    };
-
-    await Toughts.create(tought);
-
-    req.flash("message", "Pensamento criado com sucesso!");
-
-    try {
-      req.session.save(() => {
-        res.redirect("/toughts/dashboard");
-      });
-    } catch (error) {
-      console.log(`Erro! ===> ${error}`);
+      title: req.body.title,
+      UserId: req.session.userid,
     }
+
+    Tought.create(tought)
+      .then(() => {
+        req.flash('message', 'Pensamento criado com sucesso!')
+        req.session.save(() => {
+          res.redirect('/toughts/dashboard')
+        })
+      })
+      .catch((err) => console.log())
   }
 
-  static async removeTought(req, res) {
-    const id = req.body.id;
-    const UserId = req.session.userid;
+  static showToughts(req, res) {
+    console.log(req.query)
 
-    try {
-      await Toughts.destroy({ where: { id: id, UserId: UserId } });
+    // check if user is searching
+    let search = ''
 
-      req.flash("message", "Pensamento removido com sucesso!");
-
-      req.session.save(() => {
-        res.redirect("/toughts/dashboard");
-      });
-    } catch (error) {
-      console.log(`Erro! ===> ${error}`);
+    if (req.query.search) {
+      search = req.query.search
     }
+
+    // order results, newest first
+    let order = 'DESC'
+
+    if (req.query.order === 'old') {
+      order = 'ASC'
+    } else {
+      order = 'DESC'
+    }
+
+    Tought.findAll({
+      include: User,
+      where: {
+        title: { [Op.like]: `%${search}%` },
+      },
+      order: [['createdAt', order]],
+    })
+      .then((data) => {
+        let toughtsQty = data.length
+
+        if (toughtsQty === 0) {
+          toughtsQty = false
+        }
+
+        const toughts = data.map((result) => result.get({ plain: true }))
+
+        res.render('toughts/home', { toughts, toughtsQty, search })
+      })
+      .catch((err) => console.log(err))
   }
 
-  static async updateTought(req, res) {
-    const id = req.params.id;
+  static removeTought(req, res) {
+    const id = req.body.id
 
-    const tought = await Toughts.findOne({ where: { id: id }, raw: true });
-
-    res.render("toughts/edit", { tought });
+    Tought.destroy({ where: { id: id } })
+      .then(() => {
+        req.flash('message', 'Pensamento removido com sucesso!')
+        req.session.save(() => {
+          res.redirect('/toughts/dashboard')
+        })
+      })
+      .catch((err) => console.log())
   }
 
-  static async updateToughtSave(req, res) {
-    const id = req.body.id;
+  static updateTought(req, res) {
+    const id = req.params.id
+
+    Tought.findOne({ where: { id: id }, raw: true })
+      .then((tought) => {
+        res.render('toughts/edit', { tought })
+      })
+      .catch((err) => console.log())
+  }
+
+  static updateToughtPost(req, res) {
+    const id = req.body.id
 
     const tought = {
       title: req.body.title,
-    };
-
-    try {
-      await Toughts.update(tought, { where: { id: id } });
-
-      req.flash("message", "Pensamento atualizado com sucesso!");
-
-      req.session.save(() => {
-        res.redirect("/toughts/dashboard");
-      });
-    } catch (error) {
-      console.log(`Erro! ===> ${error}`);
+      description: req.body.description,
     }
+
+    Tought.update(tought, { where: { id: id } })
+      .then(() => {
+        req.flash('message', 'Pensamento atualizado com sucesso!')
+        req.session.save(() => {
+          res.redirect('/toughts/dashboard')
+        })
+      })
+      .catch((err) => console.log())
   }
-};
+}
