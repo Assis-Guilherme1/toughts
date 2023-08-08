@@ -11,12 +11,12 @@ module.exports = class ToughtController {
       search = req.query.search;
     }
 
-    let order = 'DESC'
+    let order = "DESC";
 
-    if(req.query.order === 'old') {
-      order = 'ASC'
+    if (req.query.order === "old") {
+      order = "ASC";
     } else {
-      order = 'DESC'
+      order = "DESC";
     }
 
     const toughtsData = await Toughts.findAll({
@@ -24,10 +24,10 @@ module.exports = class ToughtController {
       where: {
         [Op.or]: [
           { title: { [Op.like]: `%${search}%` } },
-          { '$User.name$': { [Op.like]: `%${search}%` } },
-        ]
+          { "$User.name$": { [Op.like]: `%${search}%` } },
+        ],
       },
-      order: [['createdAt', order]]
+      order: [["createdAt", order]],
     });
 
     const toughts = toughtsData.map((result) => result.get({ plain: true }));
@@ -53,9 +53,9 @@ module.exports = class ToughtController {
     });
 
     // check user exists
-    // if (!user) {
-    //   res.redirect("/login");
-    // }
+    if (!user) {
+      res.redirect("/login");
+    }
 
     const toughts = user.Toughts.map((result) => result.dataValues);
 
